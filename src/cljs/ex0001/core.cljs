@@ -5,14 +5,35 @@
 
 (enable-console-print!)
 
+;; --- Helpers ---
+(defn display [show]
+  (if show
+    #js {}
+    #js {:display "none"}
+    )
+  )
 
-(def app-state
-  (atom
-    {:selected/animal nil
-     :app/title "Animals"
-     :animals/list
-     [[1 "Ant"] [2 "Antelope"] [3 "Bird"] [4 "Cat"] [5 "Dog"]
-      [6 "Lion"] [7 "Mouse"] [8 "Monkey"] [9 "Snake"] [10 "Zebra"]]}))
+;; --- Components ---
+(defui Inbox
+  Object
+  (render [this]
+          (dom/div "hello world")
+          )
+  )
+
+(defui Categories
+  Object
+  (render [this]
+          (dom/div "hello world")
+          )
+  )
+
+(defui Calendar
+  Object
+  (render [this]
+          (dom/div "hello world")
+          )
+  )
 
 (defui AnimalsList
   static om/IQuery
@@ -41,6 +62,114 @@
             list)))))
   )
 
+(def perspectives
+  {:inbox Inbox
+   :categories AnimalsList
+   :calendar Calendar
+   :animals AnimalsList
+   }
+  )
+
+(defui PerspectiveSwitch
+  static om/IQuery
+  (query [_]
+         [:perspectives/list :perspectives/active]
+         )
+
+  Object
+  (render [this]
+          (let [{:keys [perspectives/active
+                        perspectives/list
+                        ]} (om/props this)]
+            (println active list)
+            (apply dom/ul nil
+                    (map
+                      (fn [perspective]
+                        (dom/li #js {:style
+                             (if (= (:key perspective) active)
+                               #js {:backgroundColor "lime"}
+                               #js {}
+                               )
+                             }
+                                (dom/a #js {:href "javascript:void(0)"
+                                            :onClick (fn [_] (om/transact! this `[(~'switch-perspective {:key ~(:key perspective)})]))
+                                            }
+                                   (:name perspective)
+                                   )
+                                )
+                        )
+                      list
+                      )
+                    )
+            )
+          )
+  )
+
+
+(defui App
+  static om/IQuery
+  (query [_]
+         [:perspectives/active
+          :perspectives/list
+          :animals/list
+          :selected/animal]
+         )
+  Object
+  (render [this]
+          (let [{:keys [perspectives/active]} (om/props this)]
+            (dom/div #js {:className "container-fluid"}
+              (dom/div #js {:className "col-md-2"}
+                    (dom/h1 nil "Tabs")
+                       ((om/factory PerspectiveSwitch) (om/props this))
+                    )
+              (apply dom/div #js {:className "col-md-10"}
+                    (dom/h1 nil (str
+                                  "Hello world! "
+                                  (name active)
+                                  )
+                                  )
+                    (map
+                      (fn [[k component]]
+                        (dom/div #js {:style (display (= active k))}
+                          ((om/factory component) (om/props this))
+                          )
+                        )
+                        perspectives
+                      )
+                    )
+                  )
+            )
+    )
+  )
+
+;; --- State ---
+
+(def app-state
+  (atom
+    {:selected/animal nil
+     :app/title "Animals"
+     :animals/list
+     [[1 "Ant"] [2 "Antelope"] [3 "Bird"] [4 "Cat"] [5 "Dog"]
+      [6 "Lion"] [7 "Mouse"] [8 "Monkey"] [9 "Snake"] [10 "Zebra"]]
+     :perspectives/list 
+     [
+      {:key :inbox
+        :name "Inbox"
+        }
+      {:key :categories
+        :name "Categories"
+        }
+      {:key :calendar
+        :name "Calendar"
+        }
+      {:key :animals
+        :name "Animals"
+        }
+      ]
+    :perspectives/active :categories
+     }))
+
+;; --- Parser, reconciler and root ---
 
 (defn readf
   [{:keys [state] :as env} key params]
@@ -64,6 +193,19 @@
   )
 
 
+(defmethod mutatef 'switch-perspective
+  [{:keys [state] :as env} _ {:keys [key]}]
+  (println key)
+  {:value {:keys [
+                  ]}
+   :action
+   (fn []
+     (swap! state update-in [:perspectives/active] (fn [_] key))
+     )
+   }
+  )
+
+
 (def my-parser (om/parser {:read readf
                            :mutate mutatef
                            }))
@@ -72,21 +214,6 @@
   (om/reconciler
     {:state app-state
      :parser my-parser}))
-
-(def hello (om/factory AnimalsList))
-
-
-(defui App
-  Object
-  (render [this]
-          (dom/div #js {:className "container-fluid"}
-                   (dom/h1 nil "Hello world!")
-                   ((om/factory AnimalsList)
-                    (om/props this)
-                    )
-                   )
-    )
-  )
 
 (om/add-root! reconciler
   App (gdom/getElement "app"))
