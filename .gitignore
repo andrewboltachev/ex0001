@@ -1,4 +1,5 @@
 resources/public/js/
+resources/public/bower_components/
 figwheel_server.log
 pom.xml
 *jar

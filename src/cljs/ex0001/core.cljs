@@ -54,7 +54,7 @@
 (defmethod mutatef 'select/animal
   [{:keys [state] :as env} _ {:keys [id]}]
   {:value {:keys [
-                  :selected/animal
+                  ;:selected/animal
                   ]}
    :action
    (fn []
@@ -79,7 +79,7 @@
 (defui App
   Object
   (render [this]
-          (dom/div nil
+          (dom/div #js {:className "container-fluid"}
                    (dom/h1 nil "Hello world!")
                    ((om/factory AnimalsList)
                     (om/props this)
