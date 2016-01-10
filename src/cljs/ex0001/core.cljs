@@ -17,21 +17,21 @@
 (defui Inbox
   Object
   (render [this]
-          (dom/div "hello world")
+          (dom/div nil "hello world")
           )
   )
 
 (defui Categories
   Object
   (render [this]
-          (dom/div "hello world")
+          (dom/div nil "hello world")
           )
   )
 
 (defui Calendar
   Object
   (render [this]
-          (dom/div "hello world")
+          (dom/div nil "hello world")
           )
   )
 
@@ -64,7 +64,7 @@
 
 (def perspectives
   {:inbox Inbox
-   :categories AnimalsList
+   :categories Categories
    :calendar Calendar
    :animals AnimalsList
    }
@@ -109,10 +109,15 @@
 (defui App
   static om/IQuery
   (query [_]
-         [:perspectives/active
-          :perspectives/list
-          :animals/list
-          :selected/animal]
+          (concat
+            (mapcat om/get-query
+              (vals perspectives)
+              )
+            [
+              :perspectives/list
+              :perspectives/active
+              ]
+          )
          )
   Object
   (render [this]
