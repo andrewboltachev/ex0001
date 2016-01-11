@@ -21,10 +21,78 @@
           )
   )
 
-(defui Categories
+
+(defui CategoryNode
+  static om/Ident
+  (ident [this category]
+         [:category/by-id (:db/id category)]
+         )
+
+  static om/IQuery
+  (query [_]
+         [:category/name :category/_parent :db/id]
+         )
+
   Object
   (render [this]
-          (dom/div nil "hello world")
+          (let [props (om/props this)]
+          (dom/li nil
+                  (when-let [icon (:category/icon props)]
+                    (dom/a #js {:className "btn btn-xs"
+                                :href "javascript:void(0)"}
+                    (dom/span
+                      #js {:className icon}
+                      )
+                           )
+                    )
+                  (dom/span nil (:category/name props))
+                  (dom/button #js {:style #js {:marginLeft "10px"}
+                                   :className "btn btn-xs"}
+                              (dom/span
+                                #js {:className "glyphicon glyphicon-edit"}
+                                )
+                              )
+                  (when (:category/_parent props)
+                  (apply dom/ul nil
+                         (map (fn [category]
+                                ((om/factory CategoryNode)
+                                 category
+                                 )
+                                )
+                          (:category/_parent props)
+                          )
+                          )
+                    )
+                   )
+            )
+          )
+  )
+
+(defui Categories
+  static om/IQuery
+  (query [_]
+         [:categories/list]
+         )
+
+  Object
+  (render [this]
+          (dom/div #js {:className "container-fluid"}
+            (dom/div #js {:className "row"}
+                    (dom/div #js {:className "col-md-4"}
+                              (dom/span nil "Categories")
+                              (apply dom/ul nil
+                                      (map (fn [category] ((om/factory CategoryNode)
+                                            category)
+                                           )
+                                           (:categories/list (om/props this))
+                                           )
+                                      )
+                              )
+                    (dom/div #js {:className "col-md-8"}
+                              (dom/span nil "foo")
+                              )
+                    )
+            )
           )
   )
 
@@ -151,7 +219,51 @@
 
 (def app-state
   (atom
-    {:selected/animal nil
+    {:categories/list [
+                       {:db/id 1
+                        :category/name "Компьютерные дела"
+                        :category/icon "glyphicons-laptop"
+                        :category/_parent [
+                                           {
+                                            :db/id 10
+                                            :category/name "Работа"
+                                            }
+                                           {
+                                            :db/id 11
+                                            :category/name "Языковые"
+                                            }
+                                           {
+                                            :db/id 12
+                                            :category/name "Другие свои"
+                                            }
+                                           {
+                                            :db/id 13
+                                            :category/name "Прочие"
+                                            }
+                                           ]
+                        }
+                       {:db/id 2
+                        :category/name "Домашние дела"
+                        :category/icon "glyphicons-home"
+                        :category/_parent [
+                                           {
+                                            :db/id 20
+                                            :category/icon "glyphicons-cleaning"
+                                            :category/name "Приборка"
+                                            }
+                                           ]
+
+                        }
+                       {:db/id 3
+                        :category/icon "glyphicons-briefcase"
+                        :category/name "ИП"
+                        }
+                       {:db/id 4
+                        :category/icon "glyphicons-medicine"
+                        :category/name "Медицина"
+                        }
+                       ]
+     :selected/animal nil
      :app/title "Animals"
      :animals/list
      [[1 "Ant"] [2 "Antelope"] [3 "Bird"] [4 "Cat"] [5 "Dog"]
