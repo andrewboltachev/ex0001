@@ -9,7 +9,7 @@
   :dependencies [[org.clojure/clojure "1.7.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [figwheel-sidecar "0.5.0-3" :scope "test"]
-                 [org.omcljs/om "1.0.0-alpha22"]
+                 [org.omcljs/om "1.0.0-alpha29-SNAPSHOT"]
                  [ring "1.4.0"]
                  [compojure "1.4.0"]
                  [com.datomic/datomic-free "0.9.5344" :exclusions [joda-time]]]

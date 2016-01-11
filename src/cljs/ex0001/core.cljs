@@ -5,6 +5,110 @@
 
 (enable-console-print!)
 
+
+
+
+
+
+(defn f1 [])
+(defn ^boolean f2 [])
+(defn ^{:tag boolean1} f3 [])
+
+(when (f1))
+(when (f2))
+(when (f3))
+
+
+
+
+
+
+
+
+
+
+
+
+
+(def norm-tree-data
+  {:tree {:id 0
+          :node-value 1
+          :children [{:id 1
+                      :node-value 2
+                      :children [{:id 2
+                                  :node-value 3
+                                  :children []}]}
+                     {:id 3
+                      :node-value 4
+                      :children []}]}})
+
+(declare norm-node)
+
+(defn increment! [c id]
+  (fn [e]
+    (om/transact! c `[(tree/increment {:id ~id})])))
+
+(defn decrement! [c id]
+  (fn [e]
+    (om/transact! c `[(tree/decrement {:id ~id})])))
+
+(defui NormNode
+  static om/Ident
+  (ident [this {:keys [id]}]
+    [:node/by-id id])
+  static om/IQuery
+  (query [this]
+    '[:id :node-value {:children ...}])
+  Object
+  (render [this]
+    (let [{:keys [id node-value children]} (om/props this)]
+      (dom/li nil
+        (dom/div nil
+          (dom/label nil (str "Node value:" node-value))
+          (dom/button #js {:onClick (increment! this id)} "+")
+          (dom/button #js {:onClick (decrement! this id)} "-"))
+        (dom/ul nil
+          (map norm-node children))))))
+
+(def norm-node (om/factory NormNode))
+
+(defui Inbox
+  static om/IQuery
+  (query [this]
+    [
+     {:tree (om/get-query NormNode)}
+     ])
+  Object
+  (render [this]
+          (dom/div nil
+    (let [{:keys [tree]} (om/props this)]
+      (dom/ul nil
+        (norm-node tree))))))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ;; --- Helpers ---
 (defn display [show]
   (if show
@@ -14,12 +118,15 @@
   )
 
 ;; --- Components ---
-(defui Inbox
+(defui Inbox1
   Object
   (render [this]
           (dom/div nil "hello world")
           )
   )
+
+
+(declare category-node)
 
 
 (defui CategoryNode
@@ -30,7 +137,7 @@
 
   static om/IQuery
   (query [_]
-         [:category/name :category/_parent :db/id]
+         '[:db/id :category/name {:category/_parent ...}]
          )
 
   Object
@@ -38,16 +145,22 @@
           (let [props (om/props this)]
           (dom/li nil
                   (when-let [icon (:category/icon props)]
-                    (dom/a #js {:className "btn btn-xs"
-                                :href "javascript:void(0)"}
+                    (dom/button #js {:className "btn btn-xs btn-link"
+                           :style #js {:marginRight "3px"}
+                                     }
                     (dom/span
-                      #js {:className icon}
+                      #js {:className icon
+                           }
                       )
-                           )
+                                )
                     )
                   (dom/span nil (:category/name props))
                   (dom/button #js {:style #js {:marginLeft "10px"}
-                                   :className "btn btn-xs"}
+                                   :className "btn btn-xs"
+                                   :onClick (fn [_]
+                                              (om/transact! this `[(~'reverse-name {:id ~(:db/id props)})])
+                                              )
+                                   }
                               (dom/span
                                 #js {:className "glyphicon glyphicon-edit"}
                                 )
@@ -55,7 +168,7 @@
                   (when (:category/_parent props)
                   (apply dom/ul nil
                          (map (fn [category]
-                                ((om/factory CategoryNode)
+                                (category-node
                                  category
                                  )
                                 )
@@ -68,10 +181,12 @@
           )
   )
 
+(def category-node (om/factory CategoryNode))
+
 (defui Categories
   static om/IQuery
   (query [_]
-         [:categories/list]
+         [{:categories/list (om/get-query CategoryNode)}]
          )
 
   Object
@@ -79,6 +194,9 @@
           (dom/div #js {:className "container-fluid"}
             (dom/div #js {:className "row"}
                     (dom/div #js {:className "col-md-4"}
+
+
+
                               (dom/span nil "Categories")
                               (apply dom/ul nil
                                       (map (fn [category] ((om/factory CategoryNode)
@@ -149,7 +267,6 @@
           (let [{:keys [perspectives/active
                         perspectives/list
                         ]} (om/props this)]
-            (println active list)
             (apply dom/ul nil
                     (map
                       (fn [perspective]
@@ -173,19 +290,20 @@
           )
   )
 
-
 (defui App
   static om/IQuery
   (query [_]
-          (concat
+          #_(vec
             (mapcat om/get-query
-              (vals perspectives)
+              (conj
+                (vec (vals perspectives))
+                    PerspectiveSwitch
+                      )
               )
-            [
-              :perspectives/list
-              :perspectives/active
-              ]
           )
+         ;(om/get-query PerspectiveSwitch)
+         [:perspectives/list
+          :perspectives/active]
          )
   Object
   (render [this]
@@ -198,7 +316,7 @@
               (apply dom/div #js {:className "col-md-10"}
                     (dom/h1 nil (str
                                   "Hello world! "
-                                  (name active)
+                                  ;(name active)
                                   )
                                   )
                     (map
@@ -219,10 +337,11 @@
 
 (def app-state
   (atom
-    {:categories/list [
+    {:categories/in-dialog nil
+     :categories/list [
                        {:db/id 1
                         :category/name "Компьютерные дела"
-                        :category/icon "glyphicons-laptop"
+                        :category/icon "icon-computer"
                         :category/_parent [
                                            {
                                             :db/id 10
@@ -244,12 +363,17 @@
                         }
                        {:db/id 2
                         :category/name "Домашние дела"
-                        :category/icon "glyphicons-home"
+                        :category/icon "icon-home"
                         :category/_parent [
                                            {
                                             :db/id 20
                                             :category/icon "glyphicons-cleaning"
                                             :category/name "Приборка"
+                                            }
+                                           {
+                                            :db/id 12
+                                            :category/name "Другие свои"
+                                            :foo :bar
                                             }
                                            ]
 
@@ -288,14 +412,38 @@
 
 ;; --- Parser, reconciler and root ---
 
-(defn readf
+(defmulti readf om/dispatch)
+
+(defmethod readf :default
   [{:keys [state] :as env} key params]
   (let [st @state]
     (if-let [[_ v] (find st key)]
       {:value v}
       {:value :not-found})))
 
+(defmethod readf :tree
+  [{:keys [state query] :as env} _ _]
+  (let [st @state]
+    {:value (om/db->tree query (:tree st) st)}))
+
+(defmethod readf :node/by-id
+  [{:keys [state query query-root]} _ _]
+  {:value (om/db->tree query query-root @state)})
+
 (defmulti mutatef om/dispatch)
+
+(defmethod mutatef 'tree/increment
+  [{:keys [state]} _ {:keys [id]}]
+  {:action
+   (fn []
+     (swap! state update-in [:node/by-id id :node-value] inc))})
+
+(defmethod mutatef 'tree/decrement
+  [{:keys [state]} _ {:keys [id]}]
+  {:action
+   (fn []
+     (swap! state update-in [:node/by-id id :node-value]
+       (fn [n] (max 0 (dec n)))))})
 
 (defmethod mutatef 'select/animal
   [{:keys [state] :as env} _ {:keys [id]}]
@@ -312,12 +460,26 @@
 
 (defmethod mutatef 'switch-perspective
   [{:keys [state] :as env} _ {:keys [key]}]
-  (println key)
   {:value {:keys [
                   ]}
    :action
    (fn []
      (swap! state update-in [:perspectives/active] (fn [_] key))
+     )
+   }
+  )
+
+
+(defmethod mutatef 'reverse-name
+  [{:keys [state] :as env} _ {:keys [id]}]
+  {:value {:keys [
+                  ]}
+   :action
+   (fn []
+     (swap! state update-in [:category/by-id id :category/name]
+            ;#(str % "!")
+            identity
+            )
      )
    }
   )
@@ -330,7 +492,10 @@
 (def reconciler
   (om/reconciler
     {:state app-state
-     :parser my-parser}))
+     :parser my-parser
+     :pathopt true}))
 
 (om/add-root! reconciler
   App (gdom/getElement "app"))
+
+
