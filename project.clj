@@ -12,7 +12,9 @@
                  [org.omcljs/om "1.0.0-alpha29-SNAPSHOT"]
                  [ring "1.4.0"]
                  [compojure "1.4.0"]
-                 [com.datomic/datomic-free "0.9.5344" :exclusions [joda-time]]]
+                 [com.datomic/datomic-free "0.9.5344" :exclusions [joda-time]]
+                 [fipp "0.6.4"]
+                 ]
 
   :plugins [[lein-cljsbuild "1.1.2"]
             [lein-figwheel "0.5.0-3"]]

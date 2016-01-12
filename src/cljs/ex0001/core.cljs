@@ -72,18 +72,75 @@
 
 (def norm-node (om/factory NormNode))
 
+
+(defui PerspectiveItem
+  static om/Ident
+  (ident [this props]
+         [:perspective/by-key (-> props :perspective :key)]
+         )
+
+  static om/IQuery
+  (query [this]
+         [{:perspective [:key :name]} :active
+          :perspectives/active]
+         )
+
+  Object
+  (render [this]
+          (println (om/props this))
+    #_(dom/li nil
+            (:name (om/props this))
+            )
+
+
+          (let [{:keys [perspective active]} (om/props this)]
+(dom/li #js {:style
+                             (if (= (:key perspective) active)
+                               #js {:backgroundColor "lime"}
+                               #js {}
+                               )
+                             }
+                                (dom/a #js {:href "javascript:void(0)"
+                                            :onClick (fn [_]
+                                                       ;(om/transact! this `[(~'switch-perspective {:key ~(:key perspective)})])
+                                                       )
+                                            }
+                                   (:name perspective)
+                                   )
+                                )
+            )
+            )
+  )
+
+(def perspective-item (om/factory PerspectiveItem))
+
 (defui Inbox
   static om/IQuery
   (query [this]
     [
      {:tree (om/get-query NormNode)}
+     :perspectives/list
+     :perspectives/active
      ])
   Object
   (render [this]
           (dom/div nil
-    (let [{:keys [tree]} (om/props this)]
+    (let [{:keys [tree perspectives/list perspectives/active]} (om/props this)]
+      (println
+        (om/props this)
+        )
+      (dom/div nil
       (dom/ul nil
-        (norm-node tree))))))
+        (norm-node tree))
+      
+      (dom/ul nil
+        (map
+          #(perspective-item {:perspective %
+                              :active active})
+          list
+          ))
+               )
+      ))))
 
 
 
@@ -295,20 +352,25 @@
   (query [_]
           (vec
             (mapcat om/get-query
-              (conj
+              (filter identity (conj
                 (vec (vals perspectives))
                     PerspectiveSwitch
-                      )
+                    ;             nil
+                      ))
               )
           )
          )
   Object
   (render [this]
+          (println
+            "props"
+            (om/props this)
+            )
           (let [{:keys [perspectives/active]} (om/props this)]
             (dom/div #js {:className "container-fluid"}
               (dom/div #js {:className "col-md-2"}
                     (dom/h1 nil "Tabs")
-                       ((om/factory PerspectiveSwitch) (om/props this))
+                       ;((om/factory PerspectiveSwitch) (om/props this))
                     )
               (apply dom/div #js {:className "col-md-10"}
                     (dom/h1 nil (str
@@ -332,9 +394,9 @@
 
 ;; --- State ---
 
-(def app-state
-  (atom
-    {:categories/in-dialog nil
+(def app-data
+    {:tree (:tree norm-tree-data)
+     :categories/in-dialog nil
      :categories/list [
                        {:db/id 1
                         :category/name "Компьютерные дела"
@@ -405,7 +467,7 @@
         }
       ]
     :perspectives/active :inbox
-     }))
+     })
 
 ;; --- Parser, reconciler and root ---
 
@@ -488,11 +550,15 @@
 
 (def reconciler
   (om/reconciler
-    {:state app-state
+    {:state app-data
      :parser my-parser
      :pathopt true}))
+
+
+(println (om/get-query App))
 
 (om/add-root! reconciler
   App (gdom/getElement "app"))
 
-
+(println
+         @reconciler)
