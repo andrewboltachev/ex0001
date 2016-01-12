@@ -21,12 +21,95 @@
           )
   )
 
-(defui Categories
+
+(declare category-node)
+
+
+(defui CategoryNode
+  static om/Ident
+  (ident [this category]
+         [:category/by-id (:db/id category)]
+         )
+
+  static om/IQuery
+  (query [_]
+         '[:db/id :category/name {:category/_parent ...}]
+         )
+
   Object
   (render [this]
-          (dom/div nil "hello world")
+          (let [props (om/props this)]
+          (dom/li nil
+                  (when-let [icon (:category/icon props)]
+                    (dom/button #js {:className "btn btn-xs btn-link"
+                           :style #js {:marginRight "3px"}
+                                     }
+                    (dom/span
+                      #js {:className icon
+                           }
+                      )
+                                )
+                    )
+                  (dom/span nil (:category/name props))
+                  (dom/button #js {:style #js {:marginLeft "10px"}
+                                   :className "btn btn-xs"
+                                   :onClick (fn [_]
+                                              (om/transact! this `[(~'reverse-name {:id ~(:db/id props)})])
+                                              )
+                                   }
+                              (dom/span
+                                #js {:className "glyphicon glyphicon-edit"}
+                                )
+                              )
+                  (when (:category/_parent props)
+                  (apply dom/ul nil
+                         (map (fn [category]
+                                (category-node
+                                 category
+                                 )
+                                )
+                          (:category/_parent props)
+                          )
+                          )
+                    )
+                   )
+            )
           )
   )
+
+(def category-node (om/factory CategoryNode))
+
+(defui Categories
+  static om/IQuery
+  (query [_]
+         [{:categories/list (om/get-query CategoryNode)}]
+         )
+
+  Object
+  (render [this]
+          (dom/div #js {:className "container-fluid"}
+            (dom/div #js {:className "row"}
+                    (dom/div #js {:className "col-md-4"}
+
+
+
+                              (dom/span nil "Categories")
+                              (apply dom/ul nil
+                                      (map (fn [category] ((om/factory CategoryNode)
+                                            category)
+                                           )
+                                           (:categories/list (om/props this))
+                                           )
+                                      )
+                              )
+                    (dom/div #js {:className "col-md-8"}
+                              (dom/span nil "foo")
+                              )
+                    )
+            )
+          )
+  )
+
 
 (defui Calendar
   Object
@@ -109,7 +192,7 @@
 (defui App
   static om/IQuery
   (query [_]
-          (concat
+          (vec (concat
             (mapcat om/get-query
               (vals perspectives)
               )
@@ -118,6 +201,7 @@
               :perspectives/active
               ]
           )
+         )
          )
   Object
   (render [this]
@@ -172,6 +256,56 @@
         }
       ]
     :perspectives/active :categories
+
+     :categories/list [
+                       {:db/id 1
+                        :category/name "Компьютерные дела"
+                        :category/icon "icon-computer"
+                        :category/_parent [
+                                           {
+                                            :db/id 10
+                                            :category/name "Работа"
+                                            }
+                                           {
+                                            :db/id 11
+                                            :category/name "Языковые"
+                                            }
+                                           {
+                                            :db/id 12
+                                            :category/name "Другие свои"
+                                            }
+                                           {
+                                            :db/id 13
+                                            :category/name "Прочие"
+                                            }
+                                           ]
+                        }
+                       {:db/id 2
+                        :category/name "Домашние дела"
+                        :category/icon "icon-home"
+                        :category/_parent [
+                                           {
+                                            :db/id 20
+                                            :category/icon "glyphicons-cleaning"
+                                            :category/name "Приборка"
+                                            }
+                                           {
+                                            :db/id 12
+                                            :category/name "Другие свои"
+                                            :foo :bar
+                                            }
+                                           ]
+
+                        }
+                       {:db/id 3
+                        :category/icon "glyphicons-briefcase"
+                        :category/name "ИП"
+                        }
+                       {:db/id 4
+                        :category/icon "glyphicons-medicine"
+                        :category/name "Медицина"
+                        }
+                       ]
      }))
 
 ;; --- Parser, reconciler and root ---
@@ -195,6 +329,21 @@
      (swap! state update-in [:selected/animal] (fn [_] id))
      )
    }
+  )
+
+(defmethod mutatef 'reverse-name
+  [{:keys [state] :as env} _ {:keys [id]}]
+    {:value {:keys [
+                    ]}
+    :action
+    (fn []
+      (swap! state update-in [:category/by-id id :name] (fn [x]
+                                                          (println "there's pesky value" x)
+                                                          (str x "!")
+                                                          ))
+      (println @state)
+      )
+    }
   )
 
 
