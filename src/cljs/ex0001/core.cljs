@@ -367,7 +367,8 @@
 (def reconciler
   (om/reconciler
     {:state app-state
-     :parser my-parser}))
+     :parser my-parser
+     :pathopt true}))
 
 (om/add-root! reconciler
   App (gdom/getElement "app"))
